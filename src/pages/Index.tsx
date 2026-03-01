@@ -5,10 +5,11 @@ import SetupView from '../components/SetupView';
 import CalibrationView from '../components/CalibrationView';
 import AnalysisView from '../components/AnalysisView';
 import ResultsView from '../components/ResultsView';
+import EyeFeaturesPanel from '../components/EyeFeaturesPanel';
 import { serialManager } from '../lib/serial-manager';
 import { aiEngine } from '../lib/ai-engine';
 import { geminiAgent } from '../lib/gemini-api';
-import { EyeTracker } from '../lib/eye-tracker';
+import { EyeTracker, type EyeFeatures } from '../lib/eye-tracker';
 
 type Phase = 'setup' | 'calibration' | 'analysis' | 'results';
 
@@ -48,6 +49,12 @@ const Index = () => {
   // Results
   const [resultData, setResultData] = useState<{ probability: string; reasons: string[] }>({ probability: '0', reasons: [] });
 
+  // Eye features
+  const [eyeFeatures, setEyeFeatures] = useState<EyeFeatures>({
+    blinkRate: 0, blinkDuration: 0, pupilDilation: 0,
+    gazeDeviation: 0, microsaccades: 0, fixationTime: 0,
+  });
+
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const trackingCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,6 +70,7 @@ const Index = () => {
       if (eyeTrackerRef.current) {
         setSaccadeRate(eyeTrackerRef.current.saccadesPerSec);
         setBlinkRate(eyeTrackerRef.current.blinksPerSec);
+        setEyeFeatures({ ...eyeTrackerRef.current.features });
       }
     }, 1000);
     return () => clearInterval(interval);
@@ -262,16 +270,22 @@ const Index = () => {
           aiStatus={aiStatus}
         />
 
-        <main className="flex-1 p-8 flex justify-center">
-          <div className="flex gap-8 w-full max-w-[1400px]">
-            <SensorPanel
-              pulseBuffer={pulseBuffer}
-              bpm={bpm}
-              saccadeRate={saccadeRate}
-              blinkRate={blinkRate}
-              videoRef={videoRef}
-              trackingCanvasRef={trackingCanvasRef}
-            />
+        <main className="flex-1 p-8 flex justify-center overflow-auto">
+          <div className="flex gap-8 w-full max-w-[1600px]">
+            <div className="w-[380px] flex-shrink-0 flex flex-col gap-4">
+              <SensorPanel
+                pulseBuffer={pulseBuffer}
+                bpm={bpm}
+                saccadeRate={saccadeRate}
+                blinkRate={blinkRate}
+                videoRef={videoRef}
+                trackingCanvasRef={trackingCanvasRef}
+              />
+              <EyeFeaturesPanel
+                features={eyeFeatures}
+                isActive={cameraStatus === 'green'}
+              />
+            </div>
 
             <section className="cyber-panel flex-1 flex flex-col p-6">
               <div className="border-b border-primary/30 pb-2 mb-4">
