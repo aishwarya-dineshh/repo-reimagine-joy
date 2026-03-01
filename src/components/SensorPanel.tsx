@@ -119,7 +119,7 @@ const SensorPanel: React.FC<SensorPanelProps> = ({
   }, [blinkRate, drawBlinkChart]);
 
   return (
-    <aside className="cyber-panel w-[380px] flex-shrink-0 flex flex-col gap-6 p-6">
+    <aside className="cyber-panel flex flex-col gap-6 p-6">
       <div className="border-b border-primary/30 pb-2 mb-2">
         <h2 className="font-heading text-sm text-muted-foreground tracking-wider">SENSOR STREAMS</h2>
       </div>
