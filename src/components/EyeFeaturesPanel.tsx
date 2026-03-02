@@ -9,7 +9,6 @@ interface EyeFeaturesPanelProps {
 const featureLabels: Record<keyof EyeFeatures, { label: string; unit: string; max: number }> = {
   blinkRate: { label: 'BLINK RATE', unit: '/sec', max: 3 },
   blinkDuration: { label: 'BLINK DURATION', unit: 'ms', max: 500 },
-  pupilDilation: { label: 'PUPIL DILATION', unit: '', max: 1 },
   gazeDeviation: { label: 'GAZE DEVIATION', unit: '', max: 0.1 },
   microsaccades: { label: 'MICROSACCADES', unit: '/sec', max: 10 },
   fixationTime: { label: 'FIXATION TIME', unit: '', max: 1 },

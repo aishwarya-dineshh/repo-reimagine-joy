@@ -39,7 +39,6 @@ const Index = () => {
 
   // Analysis
   const [analysisQuestion, setAnalysisQuestion] = useState('');
-  const [answerValue, setAnswerValue] = useState('');
   const [stressLevel, setStressLevel] = useState(0);
   const [eyeShiftStatus, setEyeShiftStatus] = useState('NORMAL');
   const [eyeShiftColor, setEyeShiftColor] = useState<'primary' | 'destructive'>('primary');
@@ -51,7 +50,7 @@ const Index = () => {
 
   // Eye features
   const [eyeFeatures, setEyeFeatures] = useState<EyeFeatures>({
-    blinkRate: 0, blinkDuration: 0, pupilDilation: 0,
+    blinkRate: 0, blinkDuration: 0,
     gazeDeviation: 0, microsaccades: 0, fixationTime: 0,
   });
 
@@ -61,7 +60,6 @@ const Index = () => {
   const eyeTrackerRef = useRef<EyeTracker | null>(null);
   const analysisIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const analysisIndexRef = useRef(0);
-  const analysisResponsesRef = useRef<{ question: string; answer: string }[]>([]);
   const lastQuestionRef = useRef('');
 
   // Eye tracking polling
@@ -166,12 +164,10 @@ const Index = () => {
 
     setPhase('analysis');
     analysisIndexRef.current = 0;
-    analysisResponsesRef.current = [];
 
     const firstQ = aiEngine.getQuestion(false, 0) || "No questions available.";
     lastQuestionRef.current = firstQ;
     setAnalysisQuestion(firstQ);
-    setAnswerValue('');
 
     // Start analysis loop
     analysisIntervalRef.current = setInterval(() => {
@@ -201,32 +197,12 @@ const Index = () => {
     }, 1000);
   }, [crimeDetails, subjectName]);
 
-  const handleNextAnalysisQuestion = useCallback(async () => {
-    const answer = answerValue.trim();
-    if (lastQuestionRef.current && answer) {
-      analysisResponsesRef.current.push({ question: lastQuestionRef.current, answer });
-    }
-    setAnswerValue('');
-
-    // Try Gemini follow-up
-    if (geminiAgent.isReady) {
-      try {
-        const followUp = await geminiAgent.generateFollowUpQuestion(
-          crimeDetails, analysisResponsesRef.current
-        );
-        if (followUp?.trim()) {
-          lastQuestionRef.current = followUp;
-          setAnalysisQuestion(followUp);
-          return;
-        }
-      } catch { /* fallback */ }
-    }
-
+  const handleNextAnalysisQuestion = useCallback(() => {
     analysisIndexRef.current++;
     const nextQ = aiEngine.getQuestion(false, analysisIndexRef.current) || "(no further questions available)";
     lastQuestionRef.current = nextQ;
     setAnalysisQuestion(nextQ);
-  }, [answerValue, crimeDetails]);
+  }, []);
 
   const handleEndAnalysis = useCallback(() => {
     if (analysisIntervalRef.current) {
@@ -320,8 +296,6 @@ const Index = () => {
               {phase === 'analysis' && (
                 <AnalysisView
                   currentQuestion={analysisQuestion}
-                  answerValue={answerValue}
-                  setAnswerValue={setAnswerValue}
                   stressLevel={stressLevel}
                   eyeShiftStatus={eyeShiftStatus}
                   eyeShiftColor={eyeShiftColor}

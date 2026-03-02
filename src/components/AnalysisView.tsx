@@ -2,8 +2,6 @@ import React from 'react';
 
 interface AnalysisViewProps {
   currentQuestion: string;
-  answerValue: string;
-  setAnswerValue: (v: string) => void;
   stressLevel: number;
   eyeShiftStatus: string;
   eyeShiftColor: 'primary' | 'destructive';
@@ -14,7 +12,7 @@ interface AnalysisViewProps {
 }
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
-  currentQuestion, answerValue, setAnswerValue, stressLevel,
+  currentQuestion, stressLevel,
   eyeShiftStatus, eyeShiftColor, pulseStatus, pulseColor,
   onNextQuestion, onEndAnalysis
 }) => {
@@ -22,14 +20,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     <div className="flex flex-col h-full animate-fade-in">
       <div className="bg-secondary/60 border-l-4 border-destructive p-8 mb-8 rounded-r-lg min-h-[150px] flex flex-col justify-center animate-pulse-border">
         <p className="text-muted-foreground text-xs tracking-[2px] mb-4">ACTIVE INTERROGATION</p>
-        <p className="text-xl font-light leading-relaxed text-foreground mb-4">{currentQuestion}</p>
-        <textarea
-          value={answerValue}
-          onChange={e => setAnswerValue(e.target.value)}
-          rows={2}
-          placeholder="Type subject's response here..."
-          className="w-full mt-2 p-2 bg-black/70 border border-border text-foreground resize-y font-body text-sm outline-none focus:border-primary"
-        />
+        <p className="text-xl font-light leading-relaxed text-foreground">{currentQuestion}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
