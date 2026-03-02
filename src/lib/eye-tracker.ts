@@ -13,6 +13,7 @@ declare const FACEMESH_LEFT_IRIS: any;
 export interface EyeFeatures {
   blinkRate: number;       // blinks per second
   blinkDuration: number;   // average blink duration in ms
+  pupilDilation: number;   // normalized iris diameter (0-1)
   gazeDeviation: number;   // horizontal gaze std deviation (0-1)
   microsaccades: number;   // rapid small eye shifts per second
   fixationTime: number;    // proportion of time eyes are stable (0-1)
@@ -20,21 +21,23 @@ export interface EyeFeatures {
 
 // Weights matching the Python code
 export const FEATURE_WEIGHTS = {
-  blinkRate: 0.25,
-  blinkDuration: 0.20,
-  gazeDeviation: 0.20,
-  microsaccades: 0.20,
-  fixationTime: 0.15,
+  blinkRate: 0.20,
+  blinkDuration: 0.15,
+  pupilDilation: 0.25,
+  gazeDeviation: 0.15,
+  microsaccades: 0.15,
+  fixationTime: 0.10,
 };
 
 export function computeGuiltScore(features: EyeFeatures): number {
   // Normalize each feature to 0-1 range and apply weights
   const normalized = {
-    blinkRate: Math.min(Math.max(features.blinkRate / 3, 0), 1),
-    blinkDuration: Math.min(Math.max(features.blinkDuration / 500, 0), 1),
+    blinkRate: Math.min(Math.max(features.blinkRate / 3, 0), 1),         // 3 blinks/sec = max
+    blinkDuration: Math.min(Math.max(features.blinkDuration / 500, 0), 1), // 500ms = max
+    pupilDilation: Math.min(Math.max(features.pupilDilation, 0), 1),
     gazeDeviation: Math.min(Math.max(features.gazeDeviation * 10, 0), 1),
-    microsaccades: Math.min(Math.max(features.microsaccades / 10, 0), 1),
-    fixationTime: 1 - Math.min(Math.max(features.fixationTime, 0), 1),
+    microsaccades: Math.min(Math.max(features.microsaccades / 10, 0), 1),  // 10/sec = max
+    fixationTime: 1 - Math.min(Math.max(features.fixationTime, 0), 1),    // inverted: less fixation = more deception
   };
 
   let score = 0;
@@ -58,6 +61,7 @@ export class EyeTracker {
   features: EyeFeatures = {
     blinkRate: 0,
     blinkDuration: 0,
+    pupilDilation: 0,
     gazeDeviation: 0,
     microsaccades: 0,
     fixationTime: 0,
@@ -75,6 +79,9 @@ export class EyeTracker {
   // Blink duration tracking
   private blinkStartTime = 0;
   private blinkDurations: number[] = [];
+
+  // Pupil dilation tracking (iris size relative to eye width)
+  private pupilSizes: number[] = [];
 
   // Gaze positions for deviation & microsaccade & fixation
   private gazeXHistory: number[] = [];
@@ -133,7 +140,13 @@ export class EyeTracker {
         this.features.blinkDuration = this.blinkDurations.reduce((a, b) => a + b, 0) / this.blinkDurations.length;
       }
 
-      // 3. Gaze Deviation (std of horizontal gaze positions)
+      // 3. Pupil Dilation (average normalized iris size)
+      if (this.pupilSizes.length > 0) {
+        const recent = this.pupilSizes.slice(-30); // last 30 samples
+        this.features.pupilDilation = recent.reduce((a, b) => a + b, 0) / recent.length;
+      }
+
+      // 4. Gaze Deviation (std of horizontal gaze positions)
       if (this.gazeXHistory.length > 2) {
         const recent = this.gazeXHistory.slice(-60);
         const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
@@ -254,6 +267,27 @@ export class EyeTracker {
 
         this.lastEyeX = gazeX;
         this.lastEyeY = gazeY;
+      }
+
+      // === PUPIL DILATION (iris size relative to eye width) ===
+      try {
+        // Left iris diameter: landmarks 469 (right) and 471 (left) of left iris
+        if (landmarks[469] && landmarks[471] && landmarks[33] && landmarks[133]) {
+          const irisDiameter = Math.hypot(
+            (landmarks[469].x - landmarks[471].x) * this.canvas.width,
+            (landmarks[469].y - landmarks[471].y) * this.canvas.height
+          );
+          const eyeWidth = Math.hypot(
+            (landmarks[33].x - landmarks[133].x) * this.canvas.width,
+            (landmarks[33].y - landmarks[133].y) * this.canvas.height
+          ) || 1;
+
+          const normalizedPupil = irisDiameter / eyeWidth;
+          this.pupilSizes.push(normalizedPupil);
+          if (this.pupilSizes.length > 300) this.pupilSizes.shift();
+        }
+      } catch {
+        // ignore
       }
 
       // === BLINK DETECTION ===
